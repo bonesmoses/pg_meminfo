@@ -64,4 +64,4 @@ This extension may act as a learning exercise or skeleton for writing Postgres e
 * Use the Postgres memory allocator.
 * Multi-source builds.
 
-Of particular note, this extension makes use of the `InitMaterializedSRF` function in [`utils/fmgr/funcapi.c`](https://github.com/postgres/postgres/blob/mastersrc/backend/utils/fmgr/funcapi.c), which _vastly_ reduces the amount of boilerplate code for set-returning functions.
+Of particular note, this extension makes use of the `InitMaterializedSRF` function in [`utils/fmgr/funcapi.c`](https://github.com/postgres/postgres/blob/master/src/backend/utils/fmgr/funcapi.c), which _vastly_ reduces the amount of boilerplate code for set-returning functions.
