@@ -54,6 +54,56 @@ Then it aggregates the remaining columns as sums by PID.
 
 Aside from the header columns, `thp_eligible`, and `vm_flags`, all other columns are expressed in kilobytes, as described by the smaps documentation.
 
+## Examples
+
+The following query uses the `smap_summary` view to find any backends using more than a standard deviation over mean private memory usage, and what each is currently doing:
+
+```sql
+WITH mem_stats AS (
+  SELECT pid, 
+         private_clean + private_dirty AS private_used,
+         round(avg(private_clean + private_dirty) 
+           over ()) AS mean_used,
+         round(stddev_pop(private_clean + private_dirty) 
+           over ()) AS standard_deviation
+    FROM smap_summary
+)
+SELECT m.pid, a.state, m.private_used,
+       m.mean_used, m.standard_deviation,
+       substring(a.query, 1, 50) AS query_part
+  FROM mem_stats m
+  JOIN pg_stat_activity a USING (pid)
+ WHERE m.private_used > m.mean_used + m.standard_deviation;
+
+-[ RECORD 1 ]------+--------------------
+pid                | 438649
+state              | active
+private_used       | 5780
+mean_used          | 1565
+standard_deviation | 1929
+query_part         | WITH mem_stats AS (+
+                   |   SELECT pid,      +
+                   |          privat
+```
+
+Given this is an otherwise idle instance, the backend where the query is running is likely to be the only result.
+
+This query would get a close approximation of the "real" memory usage for a particular Postgres instance:
+
+```sql
+SELECT pg_size_pretty(
+         pg_size_bytes(current_setting('shared_buffers')) + 
+         sum(private_clean + private_dirty) * 1024
+       ) AS mem_used
+  FROM smap_summary;
+
+ mem_used 
+----------
+ 137 MB
+```
+
+The assumption here is that `shared_buffers` is a cumulative area leveraged by all Postgres backends and remains static, while each backend may have allocated some amount of its own private memory. In this case, `shared_buffers` is the default 128MB, and all backends have cumulatively allocated about 9MB.
+
 ## Discussion
 
 This extension may act as a learning exercise or skeleton for writing Postgres extensions which do the following:
@@ -65,3 +115,7 @@ This extension may act as a learning exercise or skeleton for writing Postgres e
 * Multi-source builds.
 
 Of particular note, this extension makes use of the `InitMaterializedSRF` function in [`utils/fmgr/funcapi.c`](https://github.com/postgres/postgres/blob/master/src/backend/utils/fmgr/funcapi.c), which _vastly_ reduces the amount of boilerplate code for set-returning functions.
+
+## Compatibility
+
+This extension should be compatible with any version of Postgres which supports extensions, but has only been tested with version 17. If you are using a different version and run into an issue, please let me know.
