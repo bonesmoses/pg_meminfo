@@ -118,4 +118,9 @@ Of particular note, this extension makes use of the `InitMaterializedSRF` functi
 
 ## Compatibility
 
-This extension should be compatible with any version of Postgres which supports extensions, but has only been tested with version 17. If you are using a different version and run into an issue, please let me know.
+This extension makes use of some internal APIs which are not available in older versions of Postgres:
+
+* `InitMaterializedSRF` was added in Postgres 15.
+* `pgstat_get_local_beentry_by_index` was added in Postgres 16.
+
+As a result, this extension should work with Postgres 16 and above, but has only been tested with version 17. If you are using a different version and run into an issue, please let me know.
